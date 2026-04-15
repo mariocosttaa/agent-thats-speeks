@@ -1,7 +1,8 @@
 "use client";
 
 import { sendChat, type ChatMessage } from "@/lib/chat-api";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { getNaturalVoicesForLocale } from "@/lib/tts-voices";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const LOCALES = [
   { value: "pt-PT", label: "Português (Portugal)" },
@@ -26,15 +27,6 @@ function getSpeechRecognitionCtor(): new () => SpeechRecognition {
     throw new Error("Speech recognition is not supported in this browser");
   }
   return Ctor;
-}
-
-function voiceMatchesLocale(voice: SpeechSynthesisVoice, locale: string): boolean {
-  const vl = voice.lang.toLowerCase().replace("_", "-");
-  const loc = locale.toLowerCase();
-  if (vl === loc) return true;
-  const base = loc.split("-")[0];
-  const vb = vl.split("-")[0];
-  return vb === base;
 }
 
 export function VoiceAssistant() {
@@ -306,10 +298,10 @@ export function VoiceAssistant() {
     const loadVoices = () => {
       const v = speechSynthesis.getVoices();
       setVoices(v);
-      const filtered = v.filter((x) => voiceMatchesLocale(x, localeRef.current));
+      const curated = getNaturalVoicesForLocale(v, localeRef.current);
       setVoiceUri((prev) => {
-        if (prev && filtered.some((x) => x.voiceURI === prev)) return prev;
-        return filtered[0]?.voiceURI ?? "";
+        if (prev && curated.some((x) => x.voiceURI === prev)) return prev;
+        return curated[0]?.voiceURI ?? "";
       });
     };
     loadVoices();
@@ -318,9 +310,9 @@ export function VoiceAssistant() {
   }, []);
 
   useEffect(() => {
-    const filtered = voices.filter((x) => voiceMatchesLocale(x, locale));
-    if (voiceUri && !filtered.some((x) => x.voiceURI === voiceUri)) {
-      setVoiceUri(filtered[0]?.voiceURI ?? "");
+    const curated = getNaturalVoicesForLocale(voices, locale);
+    if (voiceUri && !curated.some((x) => x.voiceURI === voiceUri)) {
+      setVoiceUri(curated[0]?.voiceURI ?? "");
     }
   }, [locale, voiceUri, voices]);
 
@@ -343,7 +335,10 @@ export function VoiceAssistant() {
     void startMeter(deviceId || "");
   };
 
-  const filteredVoices = voices.filter((v) => voiceMatchesLocale(v, locale));
+  const curatedVoices = useMemo(
+    () => getNaturalVoicesForLocale(voices, locale),
+    [voices, locale],
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8">
@@ -380,23 +375,28 @@ export function VoiceAssistant() {
 
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-zinc-700 dark:text-zinc-300">
-            TTS voice
+            Natural voice (TTS)
           </span>
           <select
             className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
             value={voiceUri}
             onChange={(e) => setVoiceUri(e.target.value)}
           >
-            {filteredVoices.length === 0 ? (
-              <option value="">Default / loading…</option>
+            {curatedVoices.length === 0 ? (
+              <option value="">Loading voices…</option>
             ) : (
-              filteredVoices.map((v) => (
+              curatedVoices.map((v, i) => (
                 <option key={v.voiceURI} value={v.voiceURI}>
+                  {i === 0 ? "★ " : ""}
                   {v.name} ({v.lang})
                 </option>
               ))
             )}
           </select>
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            List limited to higher-quality, natural-sounding voices (Google /
+            neural-style hints). Use Chrome or Edge for the best set.
+          </span>
         </label>
 
         <label className="flex flex-col gap-1 text-sm sm:col-span-2">
