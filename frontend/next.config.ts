@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Smaller production image for Docker (standalone server bundle).
+  output: "standalone",
 };
 
 export default nextConfig;

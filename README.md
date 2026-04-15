@@ -19,9 +19,22 @@ Create a [Gemini API key](https://aistudio.google.com/apikey). Copy [`.env.examp
 GEMINI_API_KEY=your_key_here
 ```
 
-Optional: `CORS_ORIGINS=http://localhost:3000` (comma-separated for more origins).
+Optional: `CORS_ORIGINS=http://localhost:3000` (comma-separated for more origins). If you change host ports for Docker, align `CORS_ORIGINS` and `NEXT_PUBLIC_API_BASE_URL` (see [`.env.example`](.env.example)).
 
-### 2. Backend
+### Docker (recommended)
+
+From the repo root (after `.env` exists with `GEMINI_API_KEY`):
+
+```bash
+docker compose up --build
+```
+
+- App: [http://localhost:3000](http://localhost:3000) (override with `FRONTEND_HOST_PORT`)
+- API: [http://localhost:8000](http://localhost:8000) (override with `BACKEND_HOST_PORT`)
+
+The browser calls the API at `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:8000`). If you change `BACKEND_HOST_PORT`, set `NEXT_PUBLIC_API_BASE_URL` in `.env` and rebuild the `web` image.
+
+### 2. Backend (without Docker)
 
 ```bash
 python3 -m venv .venv
